@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileShare</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --surface: #111111;
+            --surface2: #1a1a1a;
+            --border: #222222;
+            --accent: #e8ff47;
+            --accent-dim: rgba(232, 255, 71, 0.08);
+            --text: #f0f0f0;
+            --text-muted: #555555;
+            --text-dim: #888888;
+            --danger: #ff4747;
+            --success: #47ff9a;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            min-height: 100vh;
+            padding: 40px 24px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(232,255,71,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(232,255,71,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 56px;
+            animation: fadeDown 0.6s ease both;
+        }
+
+        .label {
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(2.5rem, 8vw, 4rem);
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.03em;
+            color: var(--text);
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .subtitle {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 40px;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        section:nth-child(2) { animation-delay: 0.1s; }
+        section:nth-child(3) { animation-delay: 0.2s; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-family: 'Syne', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .section-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Upload zone */
+        .upload-zone {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 48px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--surface);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--accent-dim);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .upload-zone:hover::before,
+        .upload-zone.dragging::before {
+            opacity: 1;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragging {
+            border-color: var(--accent);
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            transition: border-color 0.2s;
+        }
+
+        .upload-zone:hover .upload-icon {
+            border-color: var(--accent);
+        }
+
+        .upload-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--accent);
+        }
+
+        .upload-primary {
+            font-family: 'Syne', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .upload-secondary {
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+        }
+
+        /* Progress */
+        .progress-wrap {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-wrap.visible {
+            display: block;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-bg {
+            height: 2px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        /* Status message */
+        .status {
+            margin-top: 12px;
+            font-size: 11px;
+            padding: 10px 14px;
+            border-radius: 3px;
+            display: none;
+            letter-spacing: 0.03em;
+        }
+
+        .status.success {
+            display: block;
+            background: rgba(71, 255, 154, 0.08);
+            border: 1px solid rgba(71, 255, 154, 0.2);
+            color: var(--success);
+        }
+
+        .status.error {
+            display: block;
+            background: rgba(255, 71, 71, 0.08);
+            border: 1px solid rgba(255, 71, 71, 0.2);
+            color: var(--danger);
+        }
+
+        /* File list */
+        .file-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 18px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            transition: all 0.15s ease;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .file-item:hover {
+            border-color: #333;
+            background: var(--surface2);
+        }
+
+        .file-ext {
+            font-size: 9px;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent);
+            background: var(--accent-dim);
+            padding: 3px 7px;
+            border-radius: 2px;
+            min-width: 38px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .file-name {
+            flex: 1;
+            font-size: 12px;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: 0.02em;
+        }
+
+        .file-download {
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .file-download:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        .empty-state {
+            padding: 40px;
+            text-align: center;
+            border: 1px dashed var(--border);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+        }
+
+        /* Animations */
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="label">Local Network</span>
+            <h1>File<span>Share</span></h1>
+            <p class="subtitle">Offline . No internet required . Direct transfer</p>
+        </header>
+
+        <section>
+            <div class="section-header">
+                <span class="section-title">Upload</span>
+                <div class="section-line"></div>
+            </div>
+
+            <div class="upload-zone" id="uploadZone">
+                <input type="file" id="fileInput" name="file">
+                <div class="upload-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </div>
+                <p class="upload-primary">Drop a file or tap to browse</p>
+                <p class="upload-secondary">Any file type supported</p>
+            </div>
+
+            <div class="progress-wrap" id="progressWrap">
+                <div class="progress-info">
+                    <span id="progressFilename">Uploading...</span>
+                    <span id="progressPct">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="status" id="status"></div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <span class="section-title">Files</span>
+                <div class="section-line"></div>
+            </div>
+            <ul class="file-list" id="file-list"></ul>
+        </section>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById("fileInput");
+        const uploadZone = document.getElementById("uploadZone");
+        const progressWrap = document.getElementById("progressWrap");
+        const progressFill = document.getElementById("progressFill");
+        const progressPct = document.getElementById("progressPct");
+        const progressFilename = document.getElementById("progressFilename");
+        const statusEl = document.getElementById("status");
+
+        // Drag and drop
+        uploadZone.addEventListener("dragover", e => {
+            e.preventDefault();
+            uploadZone.classList.add("dragging");
+        });
+
+        uploadZone.addEventListener("dragleave", () => {
+            uploadZone.classList.remove("dragging");
+        });
+
+        uploadZone.addEventListener("drop", e => {
+            e.preventDefault();
+            uploadZone.classList.remove("dragging");
+            const file = e.dataTransfer.files[0];
+            if (file) uploadFile(file);
+        });
+
+        fileInput.addEventListener("change", () => {
+            if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+        });
+
+        function getExt(filename) {
+            const parts = filename.split(".");
+            return parts.length > 1 ? parts.pop() : "file";
+        }
+
+        function showStatus(msg, type) {
+            statusEl.textContent = msg;
+            statusEl.className = `status ${type}`;
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append("file", file);
+
+            progressFilename.textContent = file.name;
+            progressWrap.classList.add("visible");
+            progressFill.style.width = "0%";
+            progressPct.textContent = "0%";
+            statusEl.className = "status";
+
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener("progress", e => {
+                if (e.lengthComputable) {
+                    const pct = Math.round((e.loaded / e.total) * 100);
+                    progressFill.style.width = pct + "%";
+                    progressPct.textContent = pct + "%";
+                }
+            });
+
+            xhr.addEventListener("load", () => {
+                progressWrap.classList.remove("visible");
+                if (xhr.status === 200) {
+                    showStatus("Transfer complete — " + file.name, "success");
+                    loadFiles();
+                } else {
+                    showStatus("Transfer failed. Please try again.", "error");
+                }
+                fileInput.value = "";
+            });
+
+            xhr.addEventListener("error", () => {
+                progressWrap.classList.remove("visible");
+                showStatus("Connection error. Check your network.", "error");
+            });
+
+            xhr.open("POST", "/");
+            xhr.send(formData);
+        }
+
+        async function loadFiles() {
+            const response = await fetch("/files");
+            const files = await response.json();
+            const list = document.getElementById("file-list");
+            list.innerHTML = "";
+
+            if (files.length === 0) {
+                list.innerHTML = '<div class="empty-state">No files yet</div>';
+                return;
+            }
+
+            files.forEach((filename, i) => {
+                const li = document.createElement("li");
+                li.className = "file-item";
+                li.style.animationDelay = (i * 0.05) + "s";
+
+                const ext = document.createElement("span");
+                ext.className = "file-ext";
+                ext.textContent = getExt(filename);
+
+                const name = document.createElement("span");
+                name.className = "file-name";
+                name.textContent = filename;
+
+                const link = document.createElement("a");
+                link.className = "file-download";
+                link.href = `/uploads/${filename}`;
+                link.textContent = "Get";
+                link.setAttribute("download", filename);
+
+                li.appendChild(ext);
+                li.appendChild(name);
+                li.appendChild(link);
+                list.appendChild(li);
+            });
+        }
+
+        loadFiles();
+    </script>
+</body>
+</html>
